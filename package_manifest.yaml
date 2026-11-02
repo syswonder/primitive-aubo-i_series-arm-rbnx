@@ -1,0 +1,31 @@
+manifestVersion: 1
+
+build: bash scripts/build.sh
+
+start: bash scripts/start.sh
+
+package:
+  name: robonix.primitive.aubo.i_series.arm
+  version: 0.3.0
+  description: >-
+    AUBO i-series arm (i5H, i10H) on an ARCS controller behind the standard
+    arm contracts: joint and TCP feedback, joint and TCP targets, and an
+    optional digital-output gripper. Includes an offline simulator transport.
+  tags:
+    - primitive
+    - robonix
+    - aubo
+    - i5h
+    - i10h
+    - arm
+  maintainers:
+    - HeartLinked <lfyhl0907@gmail.com>
+  license: MulanPSL-2.0
+
+capabilities:
+  - name: robonix/primitive/arm/joint_states
+  - name: robonix/primitive/arm/end_pose
+  - name: robonix/primitive/arm/joint_command
+  - name: robonix/primitive/arm/pos_command
+
+depends: []
