@@ -56,6 +56,9 @@ def model_kinematics(model):
 # +/-180 degrees; +/-360 degrees matches the i-series specification.
 JOINT_LIMIT_RAD = math.radians(360.0)
 DIGITAL_OUTPUTS = 16
+# What a prepared real cell reports, so the payload and collision checks pass.
+SIM_PAYLOAD_KG = 1.0
+SIM_COLLISION_LEVEL = 6
 ROTATION_SPEED_RAD_S = 0.5
 
 
@@ -188,6 +191,8 @@ class SimController:
             "RobotConfig.getJointMaxPositions": lambda: [JOINT_LIMIT_RAD] * 6,
             "RobotConfig.getTcpOffset": lambda: list(self._tcp_offset),
             "RobotConfig.getKinematicsParam": lambda *_: {k: list(v) for k, v in self._params.items()},
+            "RobotConfig.getPayload": lambda: [SIM_PAYLOAD_KG, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0] * 6],
+            "RobotConfig.getCollisionLevel": lambda: SIM_COLLISION_LEVEL,
             "RobotState.getRobotModeType": lambda: "Running",
             "RobotState.getSafetyModeType": lambda: "Normal",
             "RobotState.getJointPositions": lambda: list(self._joints),

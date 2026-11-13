@@ -26,9 +26,11 @@ Command topics exist only with `motion_enabled: true`.
   offset and gripper output, logs the controller's kinematics parameters, and
   starts feedback at `poll_hz`.
 - A command runs only when the controller is Running/Normal with the required
-  runtime state, the arm is stationary with an empty motion queue, and no
-  fault is latched. A command arriving while the previous motion is still
-  settling waits up to 1.5 s, then is refused.
+  runtime state, the payload and collision level are at least
+  `min_payload_kg` / `min_collision_level` (when set), the arm is
+  stationary with an empty motion queue, and no fault is latched. A command
+  arriving while the previous motion is still settling waits up to 1.5 s,
+  then is refused.
 - Targets must be inside `workspace` and within the step limits. A straight
   line must start and end inside the box (so all of it is) and is checked by
   IK at `line_check_points` points. A joint-space motion is checked by forward
@@ -65,9 +67,13 @@ See `config.spec` for every field.
   refused. The ARCS docs require the runtime only for blended motion, which
   this primitive never sends; confirm on your controller that RPC motion runs
   with the runtime Stopped before setting it to `""`.
-- The controller's joint limits are what the primitive enforces. If a cell
-  cannot reach part of that range (cabling, fixtures), narrow `workspace` and
-  the step limits rather than relying on the controller to stop the arm.
+- The primitive enforces the controller's joint limits, narrowed by
+  `joint_limits`. If a cell cannot reach part of that range (cabling,
+  fixtures), set `joint_limits` and narrow `workspace` rather than relying on
+  the controller to stop the arm.
+- A controller started with payload 0 can raise false collision stops with a
+  gripper mounted, and collision level 0 lets the motors push until they stall.
+  `min_payload_kg` and `min_collision_level` refuse motion in those states.
 
 ## Tests
 

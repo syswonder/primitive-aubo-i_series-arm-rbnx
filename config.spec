@@ -27,6 +27,11 @@ config:
   max_joint_step_rad: 0.5        # per joint, and the whole joint path must stay in the workspace
   command_timeout_s: 30
   required_runtime: Running      # RuntimeMachine state required for writes; "" skips the check
+  joint_limits:                  # optional; narrows the controller's limits (rad), e.g. a wrist cable
+    min: [-6.28, -6.28, -6.28, -6.28, -6.28, -1.80]
+    max: [6.28, 6.28, 6.28, 6.28, 6.28, 6.28]
+  min_payload_kg: 0              # writes refused while RobotConfig.getPayload is lower; 0 skips
+  min_collision_level: 0         # writes refused while RobotConfig.getCollisionLevel is lower; 0 skips
 
   gripper:                       # omit for an arm without a digital-output gripper
     joint_name: gripper          # extra JointState joint: 1.0 open, 0.0 closed

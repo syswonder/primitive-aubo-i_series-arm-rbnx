@@ -105,8 +105,11 @@ class Arm:
             raise ValueError(f"controller model {model!r} does not match {s.expected_model!r}")
         self.minimum = vector(r("RobotConfig.getJointMinPositions"), 6, "joint minimum")
         self.maximum = vector(r("RobotConfig.getJointMaxPositions"), 6, "joint maximum")
+        if s.joint_limits is not None:
+            self.minimum = tuple(map(max, self.minimum, s.joint_limits[0]))
+            self.maximum = tuple(map(min, self.maximum, s.joint_limits[1]))
         if any(lo >= hi for lo, hi in zip(self.minimum, self.maximum)):
-            raise ValueError("controller reported invalid joint limits")
+            raise ValueError(f"no joint range left: min {list(self.minimum)}, max {list(self.maximum)}")
         self.tcp_offset = vector(r("RobotConfig.getTcpOffset"), 6, "TCP offset")
         expected = s.expected_tcp_offset
         if expected is not None and max(abs(a - b) for a, b in zip(expected, self.tcp_offset)) > 1e-6:
@@ -274,8 +277,9 @@ class Arm:
         """Check every precondition for a write and return fresh feedback.
 
         Requires: motion enabled, active, no latched fault, no motion in
-        progress, Running/Normal controller, the configured runtime state, a
-        stationary arm with an empty queue, and an unchanged TCP offset.
+        progress, Running/Normal controller, the configured runtime state,
+        payload and collision level, a stationary arm with an empty queue,
+        and an unchanged TCP offset.
         """
         s = self.settings
         if not s.motion_enabled:
@@ -292,6 +296,17 @@ class Arm:
             runtime = self.writer.call("RuntimeMachine.getStatus")
             if runtime != s.required_runtime:
                 raise ValueError(f"controller runtime is {runtime}, {s.required_runtime} is required")
+        if s.min_payload_kg:
+            payload = self.writer.call("RobotConfig.getPayload")
+            mass = payload[0] if isinstance(payload, list) and payload else None
+            if type(mass) not in (int, float) or mass < s.min_payload_kg:
+                raise ValueError(f"controller payload is {mass} kg, below min_payload_kg "
+                                 f"{s.min_payload_kg}; set it on the pendant before power-on")
+        if s.min_collision_level:
+            level = self.writer.call("RobotConfig.getCollisionLevel")
+            if type(level) is not int or level < s.min_collision_level:
+                raise ValueError(f"controller collision level is {level}, below "
+                                 f"min_collision_level {s.min_collision_level}")
         if not self._quiet(sample):
             raise ValueError("the arm must be stationary with an empty motion queue")
         offset = vector(self.writer.call("RobotConfig.getTcpOffset"), 6, "TCP offset")
@@ -316,9 +331,9 @@ class Arm:
         return vector(result[0], 6, "FK pose")
 
     def _check_limits(self, joints):
-        """Require the controller's joint limits."""
+        """Require the controller's joint limits, narrowed by ``joint_limits``."""
         if any(not lo <= q <= hi for q, lo, hi in zip(joints, self.minimum, self.maximum)):
-            raise ValueError("a joint position is outside the controller joint limits")
+            raise ValueError("a joint position is outside the joint limits")
 
     def _check_joint_path(self, start, target):
         """Validate a joint-space motion along its whole interpolation.

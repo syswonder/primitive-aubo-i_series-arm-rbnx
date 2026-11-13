@@ -250,6 +250,28 @@ class ArmTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "executing a motion"):
             fresh.activate()
 
+    def test_configured_joint_limits_narrow_the_controller_limits(self):
+        q6 = CELL_JOINTS[5]
+        arm = self.make(joint_limits={"min": [-7] * 5 + [q6 - 0.01], "max": [7] * 6})
+        target = list(CELL_JOINTS)
+        target[5] -= 0.02
+        with self.assertRaisesRegex(ValueError, "joint limits"):
+            arm.command_joints(NAMES, target)
+        target[5] += 0.03
+        arm.command_joints(NAMES, target)
+        self.assertEqual(self.writer.writes, ["MotionControl.moveJoint"])
+
+    def test_low_payload_or_collision_level_refuses_motion(self):
+        arm = self.make(min_payload_kg=2.0)
+        with self.assertRaisesRegex(ValueError, "payload is 1.0 kg"):
+            arm.command_joints(["gripper"], [0.0])
+        arm = self.make(min_collision_level=7)
+        with self.assertRaisesRegex(ValueError, "collision level is 6"):
+            arm.command_joints(["gripper"], [0.0])
+        self.assertEqual(self.writer.writes, [])
+        self.make(min_payload_kg=0.5, min_collision_level=1).command_joints(["gripper"], [0.0])
+        self.assertEqual(self.writer.writes, ["IoControl.setStandardDigitalOutput"])
+
     def test_line_from_outside_the_workspace_is_refused(self):
         arm = self.make(workspace={"min": [-0.9, -0.2, 0.06], "max": [-0.2, 0.6, 0.5]})
         t = arm.refresh().tcp              # z = 0.052, below the box
@@ -267,6 +289,10 @@ class SettingsTest(unittest.TestCase):
             settings(workspace={"min": [0, 0, 0], "max": [0, 1, 1]})
         with self.assertRaisesRegex(ValueError, "host is required"):
             settings(transport="sdk")
+        with self.assertRaisesRegex(ValueError, "joint_limits"):
+            settings(joint_limits={"min": [0] * 6})
+        with self.assertRaisesRegex(ValueError, "min_collision_level"):
+            settings(min_collision_level=1.5)
 
 
 if __name__ == "__main__":

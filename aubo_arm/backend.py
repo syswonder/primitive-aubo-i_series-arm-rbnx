@@ -19,6 +19,8 @@ READS = frozenset({
     "RobotConfig.getJointMaxPositions",
     "RobotConfig.getTcpOffset",
     "RobotConfig.getKinematicsParam",
+    "RobotConfig.getPayload",
+    "RobotConfig.getCollisionLevel",
     "RobotState.getRobotModeType",
     "RobotState.getSafetyModeType",
     "RobotState.getJointPositions",

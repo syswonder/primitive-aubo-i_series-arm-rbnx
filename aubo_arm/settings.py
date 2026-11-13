@@ -107,6 +107,9 @@ class Settings:
     max_line_joint_jump_rad: float = 0.35
     required_runtime: str = "Running"
     expected_tcp_offset: tuple | None = None
+    joint_limits: tuple | None = None     # (min, max), narrowing the controller's limits
+    min_payload_kg: float = 0.0
+    min_collision_level: int = 0
     gripper: Gripper | None = None
     sim: Sim | None = None
 
@@ -128,6 +131,12 @@ class Settings:
             cfg["gripper"] = Gripper.parse(cfg["gripper"])
         if cfg.get("sim") is not None:
             cfg["sim"] = Sim.parse(cfg["sim"])
+        limits = cfg.get("joint_limits")
+        if limits is not None:
+            if not isinstance(limits, dict) or set(limits) != {"min", "max"}:
+                raise ValueError("joint_limits must be a mapping with min and max")
+            cfg["joint_limits"] = (vector(limits["min"], 6, "joint_limits.min"),
+                                   vector(limits["max"], 6, "joint_limits.max"))
         if cfg.get("expected_tcp_offset") is not None:
             cfg["expected_tcp_offset"] = vector(cfg["expected_tcp_offset"], 6,
                                                 "expected_tcp_offset")
@@ -171,6 +180,11 @@ class Settings:
             raise ValueError("topic_prefix must be an absolute ROS name without a trailing /")
         if self.cartesian_motion not in {"linear", "joint"}:
             raise ValueError("cartesian_motion must be linear or joint")
+        if (type(self.min_payload_kg) not in (int, float) or not math.isfinite(self.min_payload_kg)
+                or self.min_payload_kg < 0):
+            raise ValueError("min_payload_kg must be a finite number >= 0 (0 skips the check)")
+        if type(self.min_collision_level) is not int or self.min_collision_level < 0:
+            raise ValueError("min_collision_level must be an integer >= 0 (0 skips the check)")
         if not isinstance(self.required_runtime, str):
             raise ValueError("required_runtime must be a string ('' disables the check)")
         for f in fields(self):
