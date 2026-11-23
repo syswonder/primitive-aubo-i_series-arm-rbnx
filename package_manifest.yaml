@@ -24,8 +24,12 @@ package:
 
 capabilities:
   - name: robonix/primitive/arm/joint_states
+    transport: ros2
   - name: robonix/primitive/arm/end_pose
+    transport: ros2
   - name: robonix/primitive/arm/joint_command
+    transport: ros2
   - name: robonix/primitive/arm/pos_command
+    transport: ros2
 
 depends: []
